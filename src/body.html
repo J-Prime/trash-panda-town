@@ -1,0 +1,41 @@
+<div id="app">
+  <section id="hub" class="screen hub">
+    <header class="hubtop">
+      <div class="toprow">
+        <span class="pills"><span class="pill" id="hubStars"></span><span class="pill" id="hubCaps"></span></span>
+        <span class="tools"><button class="iconbtn wide" id="mapBtn" type="button" aria-label="Map"></button><button class="iconbtn" id="muteBtn" aria-label="Sound on or off"></button></span>
+      </div>
+      <h1 id="townName">Trash Panda Town</h1>
+      <p class="greet" id="greet"></p>
+    </header>
+    <div class="scene" id="scene"></div>
+    <div class="project" id="project"></div>
+    <div class="crew" id="crew"></div>
+    <p class="fact" id="fact"></p>
+    <p class="dedi" id="dedi" hidden></p>
+    <button class="linkbtn" id="saveBtn" type="button">Back up or move my progress</button>
+  </section>
+
+  <section id="game" class="screen" hidden>
+    <div class="gamebar">
+      <button class="back" id="backBtn" aria-label="Back to town"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Town</span></button>
+      <div class="gtitle" id="gTitle"></div>
+      <button class="iconbtn sm" id="helpBtn" aria-label="How to play"></button>
+      <span class="pill" id="gCaps"></span>
+    </div>
+    <div class="bubble"><div class="face" id="gFace"></div><div class="say" id="gSay"></div></div>
+    <div class="stats" id="stats"></div>
+    <div id="stage"></div>
+    <div id="controls"></div>
+  </section>
+</div>
+
+<div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="sheet">
+    <div id="mFace"></div>
+    <h2 id="mTitle"></h2>
+    <p id="mText"></p>
+    <div id="mExtra"></div>
+    <div class="mbtns" id="mBtns"></div>
+  </div>
+</div>
