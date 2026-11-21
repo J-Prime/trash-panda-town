@@ -5,7 +5,7 @@ const url = 'file://' + path.resolve(__dirname, '../index.html') + '?test';
 const shot = process.argv[2], VW = +process.env.VW || 390, VH = +process.env.VH || 844, SHOTS = process.env.SHOTS;
 (async () => {
   const prof = fs.mkdtempSync('/tmp/tpt-chrome-');
-  const ch = spawn(CHROME, ['--headless=new', '--remote-debugging-port=9333', '--user-data-dir=' + prof, '--window-size=' + VW + ',' + VH, '--force-device-scale-factor=2', '--hide-scrollbars', 'about:blank'], { stdio: 'ignore' });
+  const ch = spawn(CHROME, ['--headless=new', '--remote-debugging-port=9333', '--user-data-dir=' + prof, '--window-size=' + VW + ',' + VH, '--force-device-scale-factor=2', '--hide-scrollbars', '--autoplay-policy=no-user-gesture-required', 'about:blank'], { stdio: 'ignore' });
   let list;
   for (let i = 0; i < 50 && !list; i++) { await new Promise(r => setTimeout(r, 200)); try { list = await (await fetch('http://127.0.0.1:9333/json')).json(); } catch (e) {} }
   const ws = new WebSocket(list.find(t => t.type === 'page').webSocketDebuggerUrl);

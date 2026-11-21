@@ -162,7 +162,7 @@ const Stack = (() => {
     for (const [kx, ky] of kicks) {
       if (fits(m, piece.x + kx, piece.y - ky)) {
         piece.m = m; piece.x += kx; piece.y -= ky; piece.rs = to; lastRot = true; touched();
-        tone(500, .04, 'triangle', .04); return;
+        sfx.tick(); return;
       }
     }
   }
@@ -171,7 +171,7 @@ const Stack = (() => {
     const k = piece.k; holdUsed = true;
     if (holdK) { const h0 = holdK; holdK = k; spawn(h0); }
     else { holdK = k; spawn(); }
-    tone(330, .06, 'triangle', .05);
+    sfx.swish();
   }
   const live = () => !over && piece && !modalOpen();
   function soft() { if (!live()) return; if (fits(piece.m, piece.x, piece.y + 1)) { piece.y++; score += 1; raw += 1; lastRot = false; fallAcc = 0; } }
@@ -204,9 +204,9 @@ const Stack = (() => {
       const label = pc ? 'All clear!' : ts ? ['T-spin!', 'T-spin single!', 'T-spin double!', 'T-spin triple!'][cleared] : ['', '', 'Double', 'Triple', 'Four rows!'][cleared];
       if (label) popup = { t: (big && b2b && cleared && label !== 'All clear!' ? 'Back to back! ' : '') + label, at: performance.now() };
       else if (combo > 1) popup = { t: `Combo ×${combo}`, at: performance.now() };
-      if (cleared) { sfx.good(); buzz(25); } else sfx.star(0);
+      if (cleared) { sfx.clear(cleared); buzz(25); } else sfx.star(0);
       if (cleared === 4) say('FOUR ROWS! A legendary pack job!'); else if (ts && cleared) say('A T-spin! Bandit didn\'t know you could do that.'); else if (combo === 3) say('Combo! Keep the clears coming.');
-    } else { combo = -1; tone(200, .05, 'triangle', .05); }
+    } else { combo = -1; sfx.land(); }
     stats();
     if ((mode === 'dig' && !junkLeft) || (mode !== 'dig' && lines >= target)) return finish();
     spawn();
@@ -234,7 +234,7 @@ const Stack = (() => {
       elapsed += dt;
       if (grounded()) { lockT += dt; if (lockT >= LOCK_MS || resets >= LOCK_RESETS) lock(); }
       else { fallAcc += dt; const g = gravityMs(); while (fallAcc >= g && piece && fits(piece.m, piece.x, piece.y + 1)) { piece.y++; fallAcc -= g; lastRot = false; } if (grounded()) fallAcc = 0; }
-      if (mode === 'rush' && !over) { rushAcc += dt; if (rushAcc >= rushEvery) { rushAcc = 0; if (!addJunk(1)) gameOver(); else { tone(140, .12, 'square', .03); popup = { t: 'Junk!', at: ts }; } } }
+      if (mode === 'rush' && !over) { rushAcc += dt; if (rushAcc >= rushEvery) { rushAcc = 0; if (!addJunk(1)) gameOver(); else { sfx.rumble(); popup = { t: 'Junk!', at: ts }; } } }
       if (mode === 'sprint' && !over) {
         if (Math.floor(elapsed / 1000) !== Math.floor((elapsed - dt) / 1000)) stats();
         if (elapsed >= timeLimit * 1000) timeUp();

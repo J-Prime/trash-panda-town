@@ -141,7 +141,7 @@ const TRAVEL = {
 };
 function travelTo(id) {
   if (placeState(id) !== 'open') return;
-  sfx.tap();
+  sfx.whoosh();
   const first = id === 'forest' && !S.trip;
   const arrive = () => {
     closeMap();
@@ -162,7 +162,6 @@ function playCine(shots, lastTap, onDone) {
     <div class="cine-cap bubble"><div class="face"></div><div class="say"></div></div><p class="cine-tap">Tap to continue</p>`;
   document.body.append(el);
   let i = -1, done = false;
-  const notes = [392, 440, 523, 587, 659, 784];
   const show = () => {
     const sh = shots[i];
     el.style.backgroundColor = sh.bg;
@@ -171,7 +170,7 @@ function playCine(shots, lastTap, onDone) {
     const say = $('.say', el); say.innerHTML = `<b>${CREW[sh.k].short}:</b> ${sh.text}`;
     say.style.animation = 'none'; void say.offsetWidth; say.style.animation = '';
     $('.cine-tap', el).textContent = i === shots.length - 1 ? lastTap : 'Tap to continue';
-    tone(notes[i % notes.length], .28, 'triangle', .06);
+    sfx.note(i);
   };
   const end = () => {
     if (done) return; done = true;

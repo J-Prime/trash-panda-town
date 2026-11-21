@@ -16,7 +16,7 @@ const modalOpen = () => !$('#modal').hidden;
 const KEY = 'trash-panda-town-v2', OLD_KEY = 'trash-panda-town-v1';
 const ORDER = ['pop', 'merge', 'stack', 'bingo', 'sort'];
 const fresh = () => ({
-  v: 2, name: '', caps: 50, stars: 0, totalStars: 0, helps: 0, parties: 0, muted: false,
+  v: 2, name: '', caps: 50, stars: 0, totalStars: 0, helps: 0, parties: 0, sfx: 2, music: 1,
   lv: { pop: 1, merge: 1, stack: 1, bingo: 1, sort: 1 }, got: { pop: 0, merge: 0, stack: 0, bingo: 0, sort: 0 },
   best: {}, town: [], region: 'alley', trip: 0, kitchen: null, tut: {},
 });
@@ -26,7 +26,7 @@ function load() {
     const v2 = JSON.parse(localStorage.getItem(KEY));
     if (v2) return v2;
     const v1 = JSON.parse(localStorage.getItem(OLD_KEY));
-    if (v1) return { name: v1.name || '', muted: !!v1.muted, caps: 50 + (v1.caps || 0), migrated: true };
+    if (v1) return { name: v1.name || '', sfx: v1.muted ? 0 : 2, music: v1.muted ? 0 : 1, caps: 50 + (v1.caps || 0), migrated: true };
   } catch (e) {}
   return null;
 }
@@ -36,47 +36,6 @@ function spend(cost) {
   S.caps -= cost; save(); updateCaps(); return true;
 }
 
-/* ---------- sound ---------- */
-let AC, master;
-// iOS only lets audio start inside a tap, and suspends it again when the page is backgrounded,
-// so every tap re-checks it. The 'playback' session makes sound play even with the ringer on silent.
-function audio() {
-  if (!AC) {
-    AC = new (window.AudioContext || window.webkitAudioContext)();
-    master = AC.createGain(); master.gain.value = 2.2; master.connect(AC.destination);
-  }
-  if (AC.state !== 'running') AC.resume().catch(() => {});
-  return AC;
-}
-function unlockAudio() {
-  if (S.muted) return;
-  try {
-    if (navigator.audioSession) navigator.audioSession.type = 'playback';
-    const ac = audio(), src = ac.createBufferSource();
-    src.buffer = ac.createBuffer(1, 1, 22050); src.connect(ac.destination); src.start(0);
-  } catch (e) {}
-}
-['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
-document.addEventListener('visibilitychange', () => { if (!document.hidden && AC && !S.muted) AC.resume().catch(() => {}); });
-function tone(f = 600, d = .08, type = 'sine', v = .07) {
-  if (S.muted) return;
-  try {
-    const ac = audio(), o = ac.createOscillator(), g = ac.createGain();
-    o.type = type; o.frequency.value = f;
-    g.gain.setValueAtTime(v, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + d);
-    o.connect(g).connect(master); o.start(); o.stop(ac.currentTime + d + .02);
-  } catch (e) {}
-}
-const sfx = {
-  tap: () => tone(420, .05, 'triangle', .05),
-  pop: (k = 0) => tone(Math.min(1400, 520 + k * 90) + rnd(60), .09, 'triangle'),
-  good: () => { tone(660, .1, 'triangle'); setTimeout(() => tone(880, .14, 'triangle'), 90); },
-  bad: () => tone(170, .14, 'square', .03),
-  boom: () => { tone(110, .25, 'sawtooth', .05); tone(220, .18, 'triangle', .06); },
-  star: i => tone(740 + i * 160, .16, 'triangle', .08),
-  win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, .2, 'triangle', .08), i * 120)),
-};
 const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 
 /* ---------- art ---------- */

@@ -1,7 +1,7 @@
 // Concatenates src/ into the single-file index.html.
 const fs = require('fs'), path = require('path');
 const src = f => fs.readFileSync(path.join(__dirname, '../src', f), 'utf8');
-const JS = ['core.js', 'meta.js', 'forest.js', 'map.js', 'app.js', 'pop-engine.js', 'pop.js', 'kitchen.js', 'stack.js', 'bingo.js', 'sort.js', 'boot.js'];
+const JS = ['core.js', 'sound.js', 'meta.js', 'forest.js', 'map.js', 'app.js', 'pop-engine.js', 'pop.js', 'kitchen.js', 'stack.js', 'bingo.js', 'sort.js', 'boot.js'];
 // Each build gets an id; version.json lets installed copies notice a newer one. src/note.txt is the "what's new" line.
 const BUILD = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
 const note = fs.existsSync(path.join(__dirname, '../src/note.txt')) ? src('note.txt').trim() : '';

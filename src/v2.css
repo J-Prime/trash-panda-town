@@ -237,3 +237,10 @@ html{padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}
 .codebox{display:block;width:100%;box-sizing:border-box;min-height:96px;resize:none;font:600 12px/1.35 ui-monospace,Menlo,monospace;word-break:break-all;padding:10px 12px;border-radius:14px;border:2px solid var(--line);background:var(--night);color:var(--moon);
   -webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 .linkbtn{align-self:center;background:none;border:0;padding:6px 10px;font-size:14px;font-weight:700;color:var(--muted);text-decoration:underline dotted;text-underline-offset:4px}
+#mExtra:has(.sndset){align-self:stretch;width:100%}
+.sndset{display:flex;flex-direction:column;gap:12px;margin-top:4px}
+.sndrow{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;text-align:left;font-weight:800;color:var(--moon)}
+.seg{display:flex;gap:4px;padding:4px;border-radius:16px;background:var(--deep)}
+.seg button{font-family:var(--display);font-size:15px;color:var(--muted);background:none;border:none;border-radius:12px;padding:7px 12px;transition:background .12s,color .12s}
+.seg button[aria-checked="true"]{background:var(--lamp);color:#3a2208;box-shadow:0 2px 0 var(--lamp-deep)}
+.seg button:focus-visible{outline:3px solid var(--mint);outline-offset:1px}

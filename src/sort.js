@@ -132,7 +132,7 @@ const Sort = (() => {
     let revealed = false;
     if (A.length && top(A).h) { top(A).h = false; revealed = true; }
     sel = -1; movesN++;
-    if (done(B)) { sfx.good(); buzz(20); } else if (revealed) tone(880, .08, 'triangle', .05); else sfx.pop();
+    if (done(B)) { sfx.good(); buzz(20); } else if (revealed) sfx.reveal(); else sfx.pour();
     render(); stats();
     if (jars.every(j => !j.length || done(j))) { finished = true; setTimeout(() => alive && finish(), 350); return; }
     if (!anyMove()) setTimeout(() => alive && stuck(), 300);

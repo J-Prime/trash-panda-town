@@ -55,7 +55,7 @@ function win(k, { stars, caps, title, text, nextLabel }) {
 
 // cont: {label, cost, fn} — a paid second chance that keeps the current board.
 function lose(k, { title, text, cont }) {
-  sfx.bad(); buzz([30, 30, 30]);
+  sfx.lose(); buzz([30, 30, 30]);
   const buttons = [];
   if (cont) buttons.push({ label: `${cont.label} · ${CAPSM} ${cont.cost}`, primary: true, disabled: S.caps < cont.cost,
     note: S.caps < cont.cost ? `You have ${S.caps} caps.` : '',
@@ -91,7 +91,7 @@ $('#helpBtn').onclick = () => { if (curKey && !modalOpen()) { sfx.tap(); showTut
 /* ---------- town ---------- */
 function renderHub() {
   updateCaps();
-  $('#muteBtn').innerHTML = icon(S.muted ? 'mute' : 'sound', 20);
+  soundIcon();
   $('#mapBtn').classList.toggle('new', mapNews());
   const R = region();
   $('#townName').textContent = R.name;
@@ -139,7 +139,7 @@ function renderProject() {
 function build(p) {
   if (S.stars < p.cost) return;
   S.stars -= p.cost; S.town.push(p.id); save();
-  freshBuild = p.id; renderHub(); sfx.win(); buzz([20, 40, 20]);
+  freshBuild = p.id; renderHub(); sfx.build(); buzz([20, 40, 20]);
   $('#scene').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   const last = !nextProject(), forest = S.region === 'forest';
   const thanks = { k: p.k, title: `${p.name} built!`, text: p.thanks };
@@ -158,7 +158,7 @@ function party() {
   showModal({ k: ORDER[S.parties % 5], title: `${P.name}!`, text: P.text,
     html: rewardHTML(PARTY_CAPS), buttons: [{ label: 'Lovely', primary: true, fn: hideModal }] });
 }
-$('#muteBtn').onclick = () => { S.muted = !S.muted; save(); renderHub(); sfx.tap(); };
+$('#muteBtn').onclick = () => { sfx.tap(); openSound(); };
 
 function askName() {
   showModal({ k: 'bingo', title: 'Who is helping tonight?', text: 'The raccoons would like to know who to thank.',

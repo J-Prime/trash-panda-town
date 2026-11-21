@@ -129,11 +129,11 @@ const Bingo = (() => {
     ballEl.innerHTML = `<small>${letter}</small>${n}`;
     ballEl.classList.remove('in'); void ballEl.offsetWidth; ballEl.classList.add('in');
     if (!rivals.some(r => !r.out && r.at >= 0)) say(LINGO[n] ? `${letter} ${n}, ${LINGO[n]}!` : `${letter} ${n}. That's ${letter}, ${n}.`);
-    tone(740, .12, 'sine', .06);
+    sfx.call(n);
     rivals.forEach(r => {
       if (r.out) return;
       r.cards.forEach(c => { const i = c.n.indexOf(n); if (i >= 0 && Math.random() > r.miss) c.d[i] = true; });
-      if (r.at < 0 && r.cards.some(c => !togo(c.d))) { r.at = called.length; say(`${r.em} ${r.name} is wriggling in their seat. Hurry, dear!`); tone(300, .2, 'square', .03); }
+      if (r.at < 0 && r.cards.some(c => !togo(c.d))) { r.at = called.length; say(`${r.em} ${r.name} is wriggling in their seat. Hurry, dear!`); sfx.uhoh(); }
     });
     update();
   }
@@ -152,7 +152,7 @@ const Bingo = (() => {
     else { wrong++; say(`${n} hasn't been called yet.`); }
     update();
   }
-  function stamp(cd, i) { cd.d[i] = true; const b = cd.cells[i]; b.classList.remove('miss'); b.classList.add('daub'); b.insertAdjacentHTML('beforeend', PAW); sfx.pop(); buzz(10); }
+  function stamp(cd, i) { cd.d[i] = true; const b = cd.cells[i]; b.classList.remove('miss'); b.classList.add('daub'); b.insertAdjacentHTML('beforeend', PAW); sfx.daub(); buzz(10); }
   function togglePaw() {
     if (!paw || ended) return;
     pawMode = !pawMode; sfx.tap();

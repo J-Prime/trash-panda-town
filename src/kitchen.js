@@ -208,7 +208,7 @@ const Kitchen = (() => {
     S.caps += o.caps; st.orders.splice(oi, 1); fill();
     if (o.vip) { const back = Math.ceil(o.units / 2) + 2; st.energy += back; st.vipServed++; toast(`${o.who} tipped ${o.caps} caps and ${back} ⚡!`); say(`${o.who} was delighted! That's a big tip.`); }
     else { st.served++; toast(`${o.who} paid ${o.caps} caps. Yum!`); say(`${o.who} loved it. Who's next?`); }
-    sfx.good(); buzz(20);
+    sfx.coin(); buzz(20);
     refresh(); check();
   }
   function check() {

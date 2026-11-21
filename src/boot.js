@@ -15,6 +15,7 @@ function boot(data) {
   const saved = (data && data.S) || load() || {}, base = fresh();
   S = Object.assign(base, saved);
   ['lv', 'got', 'best', 'tut'].forEach(k => { S[k] = Object.assign(fresh()[k], saved[k] || {}); });
+  if ('muted' in saved) { if (saved.muted) { S.sfx = 0; S.music = 0; } delete S.muted; }  // older saves had one on/off switch
   if (!Array.isArray(S.town)) S.town = [];
   if (S.region !== 'forest') S.region = 'alley';
   // Saves from before the map: a crew already in the forest has made the trip.
@@ -25,6 +26,6 @@ function boot(data) {
   if (gift) setTimeout(() => toast('Welcome back! The raccoons found 50 bonus caps for you.'), 600);
   if (!S.name) askName();
   afterReload(); setTimeout(checkForUpdate, 3000);
-  if (/[?&]test\b/.test(location.search)) window.__tpt = { openGame, closeGame, GAMES, playTrip, openMap, travelTo, closeMap, renderHub, applyRegion, coon, ALLEY, FOREST, get S() { return S; }, get audio() { return AC && AC.state; } };
+  if (/[?&]test\b/.test(location.search)) window.__tpt = { openGame, closeGame, GAMES, playTrip, openMap, travelTo, closeMap, renderHub, applyRegion, coon, ALLEY, FOREST, get S() { return S; }, get audio() { return AC && AC.state; }, get stale() { return stale; }, get buses() { return { AC, sfxBus, musBus }; }, sfx, music };
 }
 window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});

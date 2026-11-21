@@ -427,13 +427,20 @@ html{padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}
 .codebox{display:block;width:100%;box-sizing:border-box;min-height:96px;resize:none;font:600 12px/1.35 ui-monospace,Menlo,monospace;word-break:break-all;padding:10px 12px;border-radius:14px;border:2px solid var(--line);background:var(--night);color:var(--moon);
   -webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 .linkbtn{align-self:center;background:none;border:0;padding:6px 10px;font-size:14px;font-weight:700;color:var(--muted);text-decoration:underline dotted;text-underline-offset:4px}
+#mExtra:has(.sndset){align-self:stretch;width:100%}
+.sndset{display:flex;flex-direction:column;gap:12px;margin-top:4px}
+.sndrow{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;text-align:left;font-weight:800;color:var(--moon)}
+.seg{display:flex;gap:4px;padding:4px;border-radius:16px;background:var(--deep)}
+.seg button{font-family:var(--display);font-size:15px;color:var(--muted);background:none;border:none;border-radius:12px;padding:7px 12px;transition:background .12s,color .12s}
+.seg button[aria-checked="true"]{background:var(--lamp);color:#3a2208;box-shadow:0 2px 0 var(--lamp-deep)}
+.seg button:focus-visible{outline:3px solid var(--mint);outline-offset:1px}
 </style>
 <div id="app">
   <section id="hub" class="screen hub">
     <header class="hubtop">
       <div class="toprow">
         <span class="pills"><span class="pill" id="hubStars"></span><span class="pill" id="hubCaps"></span></span>
-        <span class="tools"><button class="iconbtn wide" id="mapBtn" type="button" aria-label="Map"></button><button class="iconbtn" id="muteBtn" aria-label="Sound on or off"></button></span>
+        <span class="tools"><button class="iconbtn wide" id="mapBtn" type="button" aria-label="Map"></button><button class="iconbtn" id="muteBtn" aria-label="Sound settings"></button></span>
       </div>
       <h1 id="townName">Trash Panda Town</h1>
       <p class="greet" id="greet"></p>
@@ -472,7 +479,7 @@ html{padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}
 <script>
 (() => {
 'use strict';
-const BUILD = '20261121203516';
+const BUILD = '20261121212340';
 // Put your own note here and it shows at the bottom of the town page.
 const DEDICATION = '';
 
@@ -491,7 +498,7 @@ const modalOpen = () => !$('#modal').hidden;
 const KEY = 'trash-panda-town-v2', OLD_KEY = 'trash-panda-town-v1';
 const ORDER = ['pop', 'merge', 'stack', 'bingo', 'sort'];
 const fresh = () => ({
-  v: 2, name: '', caps: 50, stars: 0, totalStars: 0, helps: 0, parties: 0, muted: false,
+  v: 2, name: '', caps: 50, stars: 0, totalStars: 0, helps: 0, parties: 0, sfx: 2, music: 1,
   lv: { pop: 1, merge: 1, stack: 1, bingo: 1, sort: 1 }, got: { pop: 0, merge: 0, stack: 0, bingo: 0, sort: 0 },
   best: {}, town: [], region: 'alley', trip: 0, kitchen: null, tut: {},
 });
@@ -501,7 +508,7 @@ function load() {
     const v2 = JSON.parse(localStorage.getItem(KEY));
     if (v2) return v2;
     const v1 = JSON.parse(localStorage.getItem(OLD_KEY));
-    if (v1) return { name: v1.name || '', muted: !!v1.muted, caps: 50 + (v1.caps || 0), migrated: true };
+    if (v1) return { name: v1.name || '', sfx: v1.muted ? 0 : 2, music: v1.muted ? 0 : 1, caps: 50 + (v1.caps || 0), migrated: true };
   } catch (e) {}
   return null;
 }
@@ -511,47 +518,6 @@ function spend(cost) {
   S.caps -= cost; save(); updateCaps(); return true;
 }
 
-/* ---------- sound ---------- */
-let AC, master;
-// iOS only lets audio start inside a tap, and suspends it again when the page is backgrounded,
-// so every tap re-checks it. The 'playback' session makes sound play even with the ringer on silent.
-function audio() {
-  if (!AC) {
-    AC = new (window.AudioContext || window.webkitAudioContext)();
-    master = AC.createGain(); master.gain.value = 2.2; master.connect(AC.destination);
-  }
-  if (AC.state !== 'running') AC.resume().catch(() => {});
-  return AC;
-}
-function unlockAudio() {
-  if (S.muted) return;
-  try {
-    if (navigator.audioSession) navigator.audioSession.type = 'playback';
-    const ac = audio(), src = ac.createBufferSource();
-    src.buffer = ac.createBuffer(1, 1, 22050); src.connect(ac.destination); src.start(0);
-  } catch (e) {}
-}
-['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
-document.addEventListener('visibilitychange', () => { if (!document.hidden && AC && !S.muted) AC.resume().catch(() => {}); });
-function tone(f = 600, d = .08, type = 'sine', v = .07) {
-  if (S.muted) return;
-  try {
-    const ac = audio(), o = ac.createOscillator(), g = ac.createGain();
-    o.type = type; o.frequency.value = f;
-    g.gain.setValueAtTime(v, ac.currentTime);
-    g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + d);
-    o.connect(g).connect(master); o.start(); o.stop(ac.currentTime + d + .02);
-  } catch (e) {}
-}
-const sfx = {
-  tap: () => tone(420, .05, 'triangle', .05),
-  pop: (k = 0) => tone(Math.min(1400, 520 + k * 90) + rnd(60), .09, 'triangle'),
-  good: () => { tone(660, .1, 'triangle'); setTimeout(() => tone(880, .14, 'triangle'), 90); },
-  bad: () => tone(170, .14, 'square', .03),
-  boom: () => { tone(110, .25, 'sawtooth', .05); tone(220, .18, 'triangle', .06); },
-  star: i => tone(740 + i * 160, .16, 'triangle', .08),
-  win: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, .2, 'triangle', .08), i * 120)),
-};
 const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 
 /* ---------- art ---------- */
@@ -766,6 +732,229 @@ function sceneSVG(freshId) {
   return s + '</svg>';
 }
 
+/* =====================================================================
+   Sound: effects and music, all made live with Web Audio (nothing to download).
+   ===================================================================== */
+let AC = null, stale = false, sfxBus, musBus, revIn, noiseBuf;
+// Volume for Off / Quiet / Loud. Music sits well under the effects.
+const LEVELS = { sfx: [0, .45, 1], music: [0, .28, .55] };
+const mf = m => 440 * 2 ** ((m - 69) / 12);
+const PENT = [0, 2, 4, 7, 9];
+const pent = (i, base = 72) => base + 12 * Math.floor(i / 5) + PENT[((i % 5) + 5) % 5];
+
+function makeContext() {
+  if (AC) { try { AC.close(); } catch (e) {} }
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  stale = false;
+  const comp = AC.createDynamicsCompressor();
+  comp.threshold.value = -16; comp.knee.value = 10; comp.ratio.value = 4; comp.attack.value = .004; comp.release.value = .2;
+  const master = AC.createGain(); master.gain.value = 1.6; master.connect(comp).connect(AC.destination);
+  sfxBus = AC.createGain(); musBus = AC.createGain(); musBus.gain.value = 0;
+  sfxBus.connect(master); musBus.connect(master);
+  // A small made-up room so notes ring a little instead of stopping dead.
+  const rev = AC.createConvolver(), len = Math.floor(AC.sampleRate * 2.2), ir = AC.createBuffer(2, len, AC.sampleRate);
+  for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3.4; }
+  rev.buffer = ir; revIn = AC.createGain(); const revOut = AC.createGain(); revOut.gain.value = .5;
+  revIn.connect(rev).connect(revOut).connect(master);
+  noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+  const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const ac = AC; ac.onstatechange = () => { if (ac === AC && ac.state === 'interrupted') stale = true; };
+  setLevels();
+}
+function setLevels() {
+  if (!AC) return;
+  const t = AC.currentTime;
+  sfxBus.gain.setTargetAtTime(LEVELS.sfx[S.sfx] ?? 1, t, .02);
+  musBus.gain.cancelScheduledValues(t); musBus.gain.setTargetAtTime(LEVELS.music[S.music] ?? 0, t, .4);
+}
+// iOS only starts audio inside a tap. After the phone locks it can hand back a context that claims to be
+// running but stays silent, and resume() doesn't fix it. So after any time away, the next tap builds a new one.
+// The 'playback' session makes sound play even with the ringer on silent.
+function unlockAudio() {
+  if (!S.sfx && !S.music) return;
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+    if (!AC || stale || AC.state === 'closed') makeContext();
+    if (AC.state !== 'running') AC.resume().catch(() => {});
+    const src = AC.createBufferSource(); src.buffer = AC.createBuffer(1, 1, 22050); src.connect(AC.destination); src.start(0);
+    music.sync();
+  } catch (e) {}
+}
+['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
+const away = () => { stale = true; music.stop(); };
+document.addEventListener('visibilitychange', () => { if (document.hidden) away(); });
+window.addEventListener('pagehide', away);
+const live = () => AC && !stale && AC.state !== 'closed';
+
+/* ---------- voices ---------- */
+const now = () => AC.currentTime + .005;
+function route(node, bus, pan, rev) {
+  let n = node;
+  if (pan && AC.createStereoPanner) { const p = AC.createStereoPanner(); p.pan.value = pan; n.connect(p); n = p; }
+  n.connect(bus);
+  if (rev) { const s = AC.createGain(); s.gain.value = rev; n.connect(s); s.connect(revIn); }
+}
+function shape(g, t, a, hold, d, v) {
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + a);
+  if (hold) g.gain.setValueAtTime(v, t + a + hold);
+  g.gain.exponentialRampToValueAtTime(.0001, t + a + hold + d);
+  return t + a + hold + d + .05;
+}
+// A plain oscillator: glides from f to `to`, with an optional lowpass and vibrato.
+function osc({ f, to, type = 'sine', t = now(), a = .005, hold = 0, d = .15, v = .2, bus = sfxBus, pan = 0, rev = .12, lp, vib = 0 }) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (to) o.frequency.exponentialRampToValueAtTime(to, t + a + hold + d * .8);
+  let n = o;
+  if (lp) { const fl = AC.createBiquadFilter(); fl.frequency.value = lp; o.connect(fl); n = fl; }
+  n.connect(g);
+  const end = shape(g, t, a, hold, d, v); route(g, bus, pan, rev);
+  if (vib) { const l = AC.createOscillator(), lg = AC.createGain(); l.frequency.value = 5.2; lg.gain.value = f * vib; l.connect(lg).connect(o.frequency); l.start(t); l.stop(end); }
+  o.start(t); o.stop(end);
+}
+// Two-oscillator FM: bells, chimes, electric piano and kalimba, depending on ratio and index.
+function bell({ f, t = now(), a = .003, d = .6, v = .14, ratio = 3.5, index = 1.6, bus = sfxBus, pan = 0, rev = .3 }) {
+  const c = AC.createOscillator(), m = AC.createOscillator(), mg = AC.createGain(), g = AC.createGain();
+  c.frequency.value = f; m.frequency.value = f * ratio;
+  mg.gain.setValueAtTime(f * index, t); mg.gain.exponentialRampToValueAtTime(f * index * .04 + .01, t + a + d);
+  m.connect(mg).connect(c.frequency); c.connect(g);
+  const end = shape(g, t, a, 0, d, v); route(g, bus, pan, rev);
+  c.start(t); m.start(t); c.stop(end); m.stop(end);
+}
+function noise({ t = now(), type = 'bandpass', f = 1000, to, q = 1, a = .002, hold = 0, d = .1, v = .15, bus = sfxBus, pan = 0, rev = .1 }) {
+  const s = AC.createBufferSource(), fl = AC.createBiquadFilter(), g = AC.createGain();
+  s.buffer = noiseBuf; s.loop = true; fl.type = type; fl.Q.value = q; fl.frequency.setValueAtTime(f, t);
+  if (to) fl.frequency.exponentialRampToValueAtTime(to, t + a + hold + d);
+  s.connect(fl).connect(g);
+  const end = shape(g, t, a, hold, d, v); route(g, bus, pan, rev);
+  s.start(t, Math.random() * .5); s.stop(end);
+}
+// Music dips while a fanfare plays, then comes back.
+function duck(sec) {
+  if (!S.music) return;
+  const g = musBus.gain, t = AC.currentTime, lvl = LEVELS.music[S.music];
+  g.cancelScheduledValues(t); g.setTargetAtTime(lvl * .3, t, .05); g.setTargetAtTime(lvl, t + sec, .5);
+}
+
+/* ---------- effects ---------- */
+const play = fn => (...args) => { if (!S.sfx || !live()) return; try { fn(...args); } catch (e) {} };
+const spread = () => Math.random() * .6 - .3;
+const sfx = {
+  tap: play(() => osc({ f: 1100, to: 650, d: .035, v: .09, rev: .03 })),
+  tick: play(() => osc({ f: 1600, to: 1350, type: 'triangle', d: .025, v: .05, rev: 0 })),
+  // Bubbly bloop that climbs the scale as a combo grows.
+  pop: play((k = 0) => { const f = mf(pent(Math.min(k, 10) + rnd(2), 67)), p = spread(); osc({ f: f * .55, to: f, d: .09, v: .2, pan: p, rev: .15 }); bell({ f: f * 2, d: .14, v: .03, index: .6, pan: p, rev: .2 }); }),
+  pour: play(() => { const f = mf(pent(5 + rnd(4), 64)); osc({ f, to: f * 1.5, d: .12, v: .15, rev: .2 }); noise({ f: 1600, to: 3400, q: 2, d: .1, v: .05 }); }),
+  reveal: play(() => { const t = now(); bell({ f: mf(88), t, d: .5, v: .07, ratio: 4 }); bell({ f: mf(95), t: t + .07, d: .7, v: .06, ratio: 4 }); }),
+  good: play(() => { const t = now(); bell({ f: mf(79), t, d: .5, v: .12 }); bell({ f: mf(84), t: t + .09, d: .8, v: .12 }); }),
+  bad: play(() => { osc({ f: 240, to: 150, type: 'triangle', d: .16, v: .14, lp: 900, rev: .05 }); osc({ f: 120, to: 80, d: .18, v: .16, rev: 0 }); }),
+  uhoh: play(() => { const t = now(); osc({ f: mf(64), t, type: 'triangle', d: .12, v: .09, lp: 1500 }); osc({ f: mf(60), t: t + .14, type: 'triangle', d: .2, v: .09, lp: 1500 }); }),
+  boom: play(() => { osc({ f: 150, to: 42, d: .32, v: .45, rev: .15 }); noise({ type: 'lowpass', f: 2600, to: 180, q: .5, d: .4, v: .28, rev: .3 }); }),
+  star: play((i = 0) => { const t = now(), f = mf(pent(5 + i * 2, 72)); bell({ f, t, d: 1, v: .13, ratio: 4.01, index: 1.2, pan: (i - 1) * .35, rev: .4 }); osc({ f: f * 2, t: t + .05, d: .25, v: .035, pan: (1 - i) * .3, rev: .5 }); }),
+  land: play(() => { osc({ f: 170, to: 70, d: .1, v: .26, rev: .02 }); noise({ type: 'lowpass', f: 900, d: .06, v: .07, rev: 0 }); }),
+  swish: play(() => noise({ f: 600, to: 2600, q: 1.5, a: .03, d: .12, v: .1, rev: .15 })),
+  clear: play((n = 1) => { const t = now(); noise({ t, type: 'highpass', f: 800, to: 6000, q: .7, a: .05, d: .25, v: .1, rev: .3 }); for (let i = 0; i <= Math.min(n, 4); i++) bell({ f: mf(pent(4 + i * 2, 72)), t: t + .05 + i * .07, d: .7, v: .1, pan: i * .2 - .3, rev: .35 }); }),
+  rumble: play(() => { osc({ f: 90, to: 60, type: 'sawtooth', d: .25, v: .08, lp: 400, rev: .05 }); noise({ type: 'lowpass', f: 400, d: .25, v: .12 }); }),
+  // Bingo ball: a dinner-bell ding, pitched by the number.
+  call: play(n => bell({ f: mf(pent(((n || rnd(15)) % 9) + 3, 67)), d: 1.1, v: .13, ratio: 2.76, index: 2, rev: .45 })),
+  daub: play(() => { osc({ f: 220, to: 110, d: .08, v: .28, rev: .02 }); noise({ f: 1200, q: .8, d: .05, v: .09 }); osc({ f: mf(84), to: mf(91), t: now() + .02, d: .1, v: .06, rev: .2 }); }),
+  coin: play(() => { const t = now(); osc({ f: mf(93), t, type: 'square', d: .06, v: .05, lp: 5000, rev: .2 }); osc({ f: mf(100), t: t + .07, type: 'square', d: .25, v: .05, lp: 5000, rev: .3 }); }),
+  note: play(i => bell({ f: mf([67, 69, 72, 74, 76, 79][i % 6]), d: 1, v: .11, ratio: 3, index: 1, rev: .45 })),
+  whoosh: play(() => noise({ f: 300, to: 2200, q: 1.2, a: .35, d: .6, v: .3, rev: .4 })),
+  win: play(() => {
+    duck(2.4); const t = now();
+    [72, 76, 79, 84].forEach((m, i) => { bell({ f: mf(m), t: t + i * .11, d: .8, v: .12, pan: i * .2 - .3, rev: .35 }); osc({ f: mf(m - 12), t: t + i * .11, type: 'triangle', d: .25, v: .06, rev: .2 }); });
+    [72, 76, 79, 83].forEach(m => osc({ f: mf(m), t: t + .45, type: 'triangle', a: .08, hold: .3, d: 1, v: .04, lp: 2400, rev: .5 }));
+    noise({ t: t + .4, type: 'highpass', f: 5000, to: 9000, a: .2, d: .8, v: .035, rev: .6 });
+  }),
+  lose: play(() => { duck(1.6); const t = now(); [67, 63, 60].forEach((m, i) => osc({ f: mf(m), to: i === 2 ? mf(m) * .94 : 0, t: t + i * .18, type: 'triangle', a: .01, d: i === 2 ? .6 : .2, v: .11, lp: 1800, rev: .3 })); }),
+  // Projects: three hammer knocks, then the fanfare.
+  build: play(() => { const t = now(); [0, .14, .28].forEach((dt, i) => { osc({ f: 320 - i * 20, to: 180, t: t + dt, d: .06, v: .24, rev: .1 }); noise({ t: t + dt, f: 2200, q: 1.5, d: .04, v: .1 }); }); setTimeout(sfx.win, 450); }),
+};
+
+/* ---------- music ---------- */
+// A tiny generative band for each place. The chords loop; the melody and fills change every time round.
+const M = {
+  keys: (f, t, d, v) => { bell({ f, t, a: .006, d, v, ratio: 1, index: .9, bus: musBus, pan: spread(), rev: .25 }); bell({ f: f * 2, t, d: .3, v: v * .12, ratio: 7, index: .3, bus: musBus, rev: .2 }); },
+  // Sawtooth through a lowpass so the bass line still shows up on a phone speaker.
+  bass: (f, t, d, v) => osc({ f, t, type: 'sawtooth', a: .01, hold: d * .3, d: d * .7, v: v * .7, lp: 750, bus: musBus, rev: .04 }),
+  kick: t => { osc({ f: 110, to: 45, t, d: .22, v: .32, bus: musBus, rev: 0 }); noise({ t, type: 'lowpass', f: 2500, d: .02, v: .04, bus: musBus, rev: 0 }); },
+  brush: t => noise({ t, f: 2200, q: .6, a: .01, d: .16, v: .06, bus: musBus, rev: .15 }),
+  hat: (t, v) => noise({ t, type: 'highpass', f: 7500, d: .035, v: v * (.6 + Math.random() * .6), bus: musBus, pan: .25, rev: .05 }),
+  vibes: (f, t, d) => bell({ f, t, d: d * 1.6, v: .055, ratio: 4, index: .5, bus: musBus, pan: spread(), rev: .45 }),
+  pad: (fs, t, d) => fs.forEach(f => [-7, 7].forEach(c => osc({ f: f * 2 ** (c / 1200), t, type: 'triangle', a: d * .3, hold: d * .3, d: d * .6, v: .018, lp: 1300, bus: musBus, rev: .4 }))),
+  kalimba: (f, t, v) => bell({ f, t, d: .5, v, ratio: 4.2, index: 1, bus: musBus, pan: spread(), rev: .35 }),
+  flute: (f, t, d) => { osc({ f, t, a: .09, hold: d * .5, d: d * .6, v: .045, bus: musBus, rev: .45, vib: .006 }); noise({ t, f: f * 2, q: 4, a: .05, d: d * .5, v: .008, bus: musBus, rev: .3 }); },
+  chirp: t => [0, .09].forEach(dt => osc({ f: 2600 + rnd(600), to: 3800 + rnd(500), t: t + dt, d: .05, v: .022, bus: musBus, pan: Math.random() * 1.4 - .7, rev: .5 })),
+};
+// A few notes from the chord, placed near `centre`, on random eighths of the bar.
+function phrase(chord, centre, slots, n) {
+  const pool = chord.map(m => m + 12 * Math.round((centre - m) / 12)), out = [];
+  [...slots].sort(() => Math.random() - .5).slice(0, n).forEach(p => { out[p] = pool[rnd(pool.length)]; });
+  return out;
+}
+const SONGS = {
+  // Midnight Alley: lo-fi jazz. Electric piano, walking bass, brushed drums, swung eighths.
+  alley: { bpm: 76, swing: .64,
+    chords: [[50, [62, 65, 69, 72]], [43, [59, 62, 65, 69]], [48, [64, 67, 71, 74]], [45, [60, 64, 67, 69]]],  // Dm9 G9 Cmaj9 Am7
+    play(s, t, beat) {
+      const bar = Math.floor(s / 8) % 4, pos = s % 8, [root, ch] = this.chords[bar];
+      if (pos === 0) { ch.forEach((m, i) => M.keys(mf(m), t + i * .015, beat * 2.4, .055)); M.bass(mf(root), t, beat * 1.6, .2); this.mel = Math.random() < .5 ? phrase(ch, 77, [0, 2, 3, 5, 6, 7], 2 + rnd(2)) : []; }
+      if (pos === 3 && Math.random() < .6) ch.slice(1).forEach(m => M.keys(mf(m), t, beat * .6, .03));
+      if (pos === 4) M.bass(mf(root + 7), t, beat * .9, .16);
+      if (pos === 6 && Math.random() < .6) { const nx = this.chords[(bar + 1) % 4][0]; M.bass(mf(nx + (nx > root ? -1 : 1)), t, beat * .5, .13); }
+      if (pos === 0 || (pos === 5 && Math.random() < .4)) M.kick(t);
+      if (pos === 2 || pos === 6) M.brush(t);
+      M.hat(t, pos % 2 ? .02 : .035);
+      if (this.mel[pos]) M.vibes(mf(this.mel[pos]), t, beat);
+    } },
+  // Whispering Woods: folk. Kalimba arpeggios, a soft pad, shaker and the odd bird.
+  forest: { bpm: 92, swing: .54,
+    chords: [[43, [67, 71, 74]], [40, [67, 71, 76]], [36, [67, 72, 76]], [38, [66, 69, 74]]],  // G Em C D
+    play(s, t, beat) {
+      const bar = Math.floor(s / 8) % 4, pos = s % 8, [root, ch] = this.chords[bar], notes = [...ch, ch[0] + 12];
+      if (pos === 0) { M.pad(ch.map(mf), t, beat * 4); M.bass(mf(root), t, beat * 2, .15); this.mel = Math.random() < .4 ? phrase(ch, 81, [0, 2, 4, 6], 2) : []; }
+      if (pos === 4) M.bass(mf(root + 7), t, beat * 1.5, .11);
+      if (pos === 0 || Math.random() < .85) M.kalimba(mf(notes[[0, 1, 2, 3, 2, 1, 2, 1][pos]]), t, pos === 0 ? .07 : .045);
+      M.hat(t, pos % 2 ? .018 : .01);
+      if (pos === 0 && Math.random() < .25) M.chirp(t + beat * rnd(4));
+      if (this.mel[pos]) M.flute(mf(this.mel[pos]), t, beat * 1.6);
+    } },
+};
+// Lookahead scheduler: every 60ms, book any notes due in the next 0.3s on the audio clock, so timing stays tight.
+const music = (() => {
+  let timer = 0, s = 0, next = 0, song = null;
+  function tick() {
+    if (!live() || AC.state !== 'running') { next = 0; return; }
+    if (!next) next = AC.currentTime + .1;
+    while (next < AC.currentTime + .3) {
+      const want = SONGS[S.region] || SONGS.alley;
+      if (song !== want && s % 8 === 0) { song = want; s = 0; song.mel = []; }  // change tune at a bar line
+      const beat = 60 / song.bpm;
+      try { song.play(s, next, beat); } catch (e) {}
+      next += beat * (s % 2 ? 1 - song.swing : song.swing); s++;
+    }
+  }
+  return {
+    sync() { if (S.music && live()) { if (!timer) { s = 0; next = 0; song = null; timer = setInterval(tick, 60); } } else this.stop(); },
+    stop() { clearInterval(timer); timer = 0; },
+  };
+})();
+
+/* ---------- settings ---------- */
+const LVL_NAMES = ['Off', 'Quiet', 'Loud'];
+function soundIcon() { $('#muteBtn').innerHTML = icon(S.sfx || S.music ? 'sound' : 'mute', 20); }
+function openSound() {
+  const row = (k, label) => `<div class="sndrow"><span id="lbl-${k}">${label}</span><div class="seg" role="radiogroup" aria-labelledby="lbl-${k}">${LVL_NAMES.map((n, v) => `<button type="button" role="radio" data-k="${k}" data-v="${v}" aria-checked="${S[k] === v}">${n}</button>`).join('')}</div></div>`;
+  showModal({ k: 'bingo', title: 'Sound', text: 'The alley and the woods each have their own tune.', html: `<div class="sndset">${row('music', 'Music')}${row('sfx', 'Sound effects')}</div>`, buttons: [{ label: 'Done', primary: true, fn: hideModal }] });
+  document.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
+    const k = b.dataset.k; S[k] = +b.dataset.v; save();
+    b.parentNode.querySelectorAll('button').forEach(x => x.setAttribute('aria-checked', x === b));
+    unlockAudio(); setLevels(); music.sync(); soundIcon();
+    if (k === 'sfx') sfx.good();
+  });
+}
+
 
 /* ---------- game shell ---------- */
 // mounted stays false while a first-time tutorial is still showing over an unmounted game.
@@ -823,7 +1012,7 @@ function win(k, { stars, caps, title, text, nextLabel }) {
 
 // cont: {label, cost, fn} — a paid second chance that keeps the current board.
 function lose(k, { title, text, cont }) {
-  sfx.bad(); buzz([30, 30, 30]);
+  sfx.lose(); buzz([30, 30, 30]);
   const buttons = [];
   if (cont) buttons.push({ label: `${cont.label} · ${CAPSM} ${cont.cost}`, primary: true, disabled: S.caps < cont.cost,
     note: S.caps < cont.cost ? `You have ${S.caps} caps.` : '',
@@ -859,7 +1048,7 @@ $('#helpBtn').onclick = () => { if (curKey && !modalOpen()) { sfx.tap(); showTut
 /* ---------- town ---------- */
 function renderHub() {
   updateCaps();
-  $('#muteBtn').innerHTML = icon(S.muted ? 'mute' : 'sound', 20);
+  soundIcon();
   $('#mapBtn').classList.toggle('new', mapNews());
   const R = region();
   $('#townName').textContent = R.name;
@@ -907,7 +1096,7 @@ function renderProject() {
 function build(p) {
   if (S.stars < p.cost) return;
   S.stars -= p.cost; S.town.push(p.id); save();
-  freshBuild = p.id; renderHub(); sfx.win(); buzz([20, 40, 20]);
+  freshBuild = p.id; renderHub(); sfx.build(); buzz([20, 40, 20]);
   $('#scene').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   const last = !nextProject(), forest = S.region === 'forest';
   const thanks = { k: p.k, title: `${p.name} built!`, text: p.thanks };
@@ -926,7 +1115,7 @@ function party() {
   showModal({ k: ORDER[S.parties % 5], title: `${P.name}!`, text: P.text,
     html: rewardHTML(PARTY_CAPS), buttons: [{ label: 'Lovely', primary: true, fn: hideModal }] });
 }
-$('#muteBtn').onclick = () => { S.muted = !S.muted; save(); renderHub(); sfx.tap(); };
+$('#muteBtn').onclick = () => { sfx.tap(); openSound(); };
 
 function askName() {
   showModal({ k: 'bingo', title: 'Who is helping tonight?', text: 'The raccoons would like to know who to thank.',
@@ -1217,7 +1406,7 @@ const TRAVEL = {
 };
 function travelTo(id) {
   if (placeState(id) !== 'open') return;
-  sfx.tap();
+  sfx.whoosh();
   const first = id === 'forest' && !S.trip;
   const arrive = () => {
     closeMap();
@@ -1238,7 +1427,6 @@ function playCine(shots, lastTap, onDone) {
     <div class="cine-cap bubble"><div class="face"></div><div class="say"></div></div><p class="cine-tap">Tap to continue</p>`;
   document.body.append(el);
   let i = -1, done = false;
-  const notes = [392, 440, 523, 587, 659, 784];
   const show = () => {
     const sh = shots[i];
     el.style.backgroundColor = sh.bg;
@@ -1247,7 +1435,7 @@ function playCine(shots, lastTap, onDone) {
     const say = $('.say', el); say.innerHTML = `<b>${CREW[sh.k].short}:</b> ${sh.text}`;
     say.style.animation = 'none'; void say.offsetWidth; say.style.animation = '';
     $('.cine-tap', el).textContent = i === shots.length - 1 ? lastTap : 'Tap to continue';
-    tone(notes[i % notes.length], .28, 'triangle', .06);
+    sfx.note(i);
   };
   const end = () => {
     if (done) return; done = true;
@@ -1292,7 +1480,8 @@ function cleanSave(d) {
   const num = (v, min = 0, max = 1e7) => { const n = Math.floor(+v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : null; };
   const ids = new Set([...ALLEY, ...FOREST].map(p => p.id));
   out.name = String(d.name || '').slice(0, 20);
-  out.muted = !!d.muted;
+  out.sfx = num(d.sfx, 0, 2) ?? (d.muted ? 0 : 2);
+  out.music = num(d.music, 0, 2) ?? (d.muted ? 0 : 1);
   out.region = d.region === 'forest' ? 'forest' : 'alley';
   out.trip = d.trip ? 1 : 0;
   out.town = [...new Set(Array.isArray(d.town) ? d.town.filter(id => ids.has(id)) : [])];
@@ -2201,7 +2390,7 @@ const Kitchen = (() => {
     S.caps += o.caps; st.orders.splice(oi, 1); fill();
     if (o.vip) { const back = Math.ceil(o.units / 2) + 2; st.energy += back; st.vipServed++; toast(`${o.who} tipped ${o.caps} caps and ${back} ⚡!`); say(`${o.who} was delighted! That's a big tip.`); }
     else { st.served++; toast(`${o.who} paid ${o.caps} caps. Yum!`); say(`${o.who} loved it. Who's next?`); }
-    sfx.good(); buzz(20);
+    sfx.coin(); buzz(20);
     refresh(); check();
   }
   function check() {
@@ -2389,7 +2578,7 @@ const Stack = (() => {
     for (const [kx, ky] of kicks) {
       if (fits(m, piece.x + kx, piece.y - ky)) {
         piece.m = m; piece.x += kx; piece.y -= ky; piece.rs = to; lastRot = true; touched();
-        tone(500, .04, 'triangle', .04); return;
+        sfx.tick(); return;
       }
     }
   }
@@ -2398,7 +2587,7 @@ const Stack = (() => {
     const k = piece.k; holdUsed = true;
     if (holdK) { const h0 = holdK; holdK = k; spawn(h0); }
     else { holdK = k; spawn(); }
-    tone(330, .06, 'triangle', .05);
+    sfx.swish();
   }
   const live = () => !over && piece && !modalOpen();
   function soft() { if (!live()) return; if (fits(piece.m, piece.x, piece.y + 1)) { piece.y++; score += 1; raw += 1; lastRot = false; fallAcc = 0; } }
@@ -2431,9 +2620,9 @@ const Stack = (() => {
       const label = pc ? 'All clear!' : ts ? ['T-spin!', 'T-spin single!', 'T-spin double!', 'T-spin triple!'][cleared] : ['', '', 'Double', 'Triple', 'Four rows!'][cleared];
       if (label) popup = { t: (big && b2b && cleared && label !== 'All clear!' ? 'Back to back! ' : '') + label, at: performance.now() };
       else if (combo > 1) popup = { t: `Combo ×${combo}`, at: performance.now() };
-      if (cleared) { sfx.good(); buzz(25); } else sfx.star(0);
+      if (cleared) { sfx.clear(cleared); buzz(25); } else sfx.star(0);
       if (cleared === 4) say('FOUR ROWS! A legendary pack job!'); else if (ts && cleared) say('A T-spin! Bandit didn\'t know you could do that.'); else if (combo === 3) say('Combo! Keep the clears coming.');
-    } else { combo = -1; tone(200, .05, 'triangle', .05); }
+    } else { combo = -1; sfx.land(); }
     stats();
     if ((mode === 'dig' && !junkLeft) || (mode !== 'dig' && lines >= target)) return finish();
     spawn();
@@ -2461,7 +2650,7 @@ const Stack = (() => {
       elapsed += dt;
       if (grounded()) { lockT += dt; if (lockT >= LOCK_MS || resets >= LOCK_RESETS) lock(); }
       else { fallAcc += dt; const g = gravityMs(); while (fallAcc >= g && piece && fits(piece.m, piece.x, piece.y + 1)) { piece.y++; fallAcc -= g; lastRot = false; } if (grounded()) fallAcc = 0; }
-      if (mode === 'rush' && !over) { rushAcc += dt; if (rushAcc >= rushEvery) { rushAcc = 0; if (!addJunk(1)) gameOver(); else { tone(140, .12, 'square', .03); popup = { t: 'Junk!', at: ts }; } } }
+      if (mode === 'rush' && !over) { rushAcc += dt; if (rushAcc >= rushEvery) { rushAcc = 0; if (!addJunk(1)) gameOver(); else { sfx.rumble(); popup = { t: 'Junk!', at: ts }; } } }
       if (mode === 'sprint' && !over) {
         if (Math.floor(elapsed / 1000) !== Math.floor((elapsed - dt) / 1000)) stats();
         if (elapsed >= timeLimit * 1000) timeUp();
@@ -2690,11 +2879,11 @@ const Bingo = (() => {
     ballEl.innerHTML = `<small>${letter}</small>${n}`;
     ballEl.classList.remove('in'); void ballEl.offsetWidth; ballEl.classList.add('in');
     if (!rivals.some(r => !r.out && r.at >= 0)) say(LINGO[n] ? `${letter} ${n}, ${LINGO[n]}!` : `${letter} ${n}. That's ${letter}, ${n}.`);
-    tone(740, .12, 'sine', .06);
+    sfx.call(n);
     rivals.forEach(r => {
       if (r.out) return;
       r.cards.forEach(c => { const i = c.n.indexOf(n); if (i >= 0 && Math.random() > r.miss) c.d[i] = true; });
-      if (r.at < 0 && r.cards.some(c => !togo(c.d))) { r.at = called.length; say(`${r.em} ${r.name} is wriggling in their seat. Hurry, dear!`); tone(300, .2, 'square', .03); }
+      if (r.at < 0 && r.cards.some(c => !togo(c.d))) { r.at = called.length; say(`${r.em} ${r.name} is wriggling in their seat. Hurry, dear!`); sfx.uhoh(); }
     });
     update();
   }
@@ -2713,7 +2902,7 @@ const Bingo = (() => {
     else { wrong++; say(`${n} hasn't been called yet.`); }
     update();
   }
-  function stamp(cd, i) { cd.d[i] = true; const b = cd.cells[i]; b.classList.remove('miss'); b.classList.add('daub'); b.insertAdjacentHTML('beforeend', PAW); sfx.pop(); buzz(10); }
+  function stamp(cd, i) { cd.d[i] = true; const b = cd.cells[i]; b.classList.remove('miss'); b.classList.add('daub'); b.insertAdjacentHTML('beforeend', PAW); sfx.daub(); buzz(10); }
   function togglePaw() {
     if (!paw || ended) return;
     pawMode = !pawMode; sfx.tap();
@@ -2881,7 +3070,7 @@ const Sort = (() => {
     let revealed = false;
     if (A.length && top(A).h) { top(A).h = false; revealed = true; }
     sel = -1; movesN++;
-    if (done(B)) { sfx.good(); buzz(20); } else if (revealed) tone(880, .08, 'triangle', .05); else sfx.pop();
+    if (done(B)) { sfx.good(); buzz(20); } else if (revealed) sfx.reveal(); else sfx.pour();
     render(); stats();
     if (jars.every(j => !j.length || done(j))) { finished = true; setTimeout(() => alive && finish(), 350); return; }
     if (!anyMove()) setTimeout(() => alive && stuck(), 300);
@@ -2929,6 +3118,7 @@ function boot(data) {
   const saved = (data && data.S) || load() || {}, base = fresh();
   S = Object.assign(base, saved);
   ['lv', 'got', 'best', 'tut'].forEach(k => { S[k] = Object.assign(fresh()[k], saved[k] || {}); });
+  if ('muted' in saved) { if (saved.muted) { S.sfx = 0; S.music = 0; } delete S.muted; }  // older saves had one on/off switch
   if (!Array.isArray(S.town)) S.town = [];
   if (S.region !== 'forest') S.region = 'alley';
   // Saves from before the map: a crew already in the forest has made the trip.
@@ -2939,7 +3129,7 @@ function boot(data) {
   if (gift) setTimeout(() => toast('Welcome back! The raccoons found 50 bonus caps for you.'), 600);
   if (!S.name) askName();
   afterReload(); setTimeout(checkForUpdate, 3000);
-  if (/[?&]test\b/.test(location.search)) window.__tpt = { openGame, closeGame, GAMES, playTrip, openMap, travelTo, closeMap, renderHub, applyRegion, coon, ALLEY, FOREST, get S() { return S; }, get audio() { return AC && AC.state; } };
+  if (/[?&]test\b/.test(location.search)) window.__tpt = { openGame, closeGame, GAMES, playTrip, openMap, travelTo, closeMap, renderHub, applyRegion, coon, ALLEY, FOREST, get S() { return S; }, get audio() { return AC && AC.state; }, get stale() { return stale; }, get buses() { return { AC, sfxBus, musBus }; }, sfx, music };
 }
 window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
 

@@ -27,7 +27,8 @@ function cleanSave(d) {
   const num = (v, min = 0, max = 1e7) => { const n = Math.floor(+v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : null; };
   const ids = new Set([...ALLEY, ...FOREST].map(p => p.id));
   out.name = String(d.name || '').slice(0, 20);
-  out.muted = !!d.muted;
+  out.sfx = num(d.sfx, 0, 2) ?? (d.muted ? 0 : 2);
+  out.music = num(d.music, 0, 2) ?? (d.muted ? 0 : 1);
   out.region = d.region === 'forest' ? 'forest' : 'alley';
   out.trip = d.trip ? 1 : 0;
   out.town = [...new Set(Array.isArray(d.town) ? d.town.filter(id => ids.has(id)) : [])];
